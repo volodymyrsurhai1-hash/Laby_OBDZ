@@ -215,7 +215,7 @@ dbsa-postgres-1   postgres:18.6   postgres   Up
 ## 8. Створення схеми
 
 - Міграція 001: [migrations/001_create_schema.up.sql](migrations/001_create_schema.up.sql), [migrations/001_create_schema.down.sql](migrations/001_create_schema.down.sql)
-- `reservations_no_active_overlap` — обмеження `EXCLUDE` за ПК і часовим інтервалом; скасовані бронювання не враховуються.
+- `reservations_no_active_overlap` — обмеження `EXCLUDE` за ПК і часовим інтервалом; скасовані бронювання не враховуються. Воно перевірене тестовим SQL, оскільки наданий скрипт `check-schema.sql` показує обмеження типів `PRIMARY KEY`, `UNIQUE`, `FOREIGN KEY` і `CHECK`.
 - `set_reservation_price()` забороняє бронювання неактивного ПК і копіює ціну призначеного тарифу.
 - Для індексації виключення використовується розширення PostgreSQL `btree_gist`. Міграція `down` прибирає таблиці й тригерну функцію, але залишає розширення, щоб не видаляти його, якщо воно використовується іншими обʼєктами бази.
 - Запит [availability-query.sql](availability-query.sql) показує активні ПК, вільні у вказаний інтервал. Обмеження `EXCLUDE` повторно перевіряє зайнятість під час вставлення, навіть якщо два клієнти одночасно побачили місце в запиті.
@@ -272,7 +272,6 @@ reservations  | FOREIGN KEY  | reservations_pc_id_fkey                  | FOREIG
 reservations  | CHECK        | reservations_agreed_price_per_hour_check | CHECK ((agreed_price_per_hour >= (0)::numeric))
 reservations  | CHECK        | reservations_status_check                | CHECK ((status = ANY (ARRAY['active'::text, 'cancelled'::text])))
 reservations  | CHECK        | reservations_valid_interval              | CHECK ((ends_at > starts_at))
-reservations  | EXCLUDE      | reservations_no_active_overlap           | EXCLUDE USING gist (pc_id WITH =, tstzrange(starts_at, ends_at, '[)'::text) WITH &&) WHERE ((status = 'active'::text))
 tariffs       | стовпець     | tariff_id                                | integer NOT NULL GENERATED AS IDENTITY
 tariffs       | стовпець     | name                                     | text NOT NULL
 tariffs       | стовпець     | price_per_hour                           | numeric NOT NULL

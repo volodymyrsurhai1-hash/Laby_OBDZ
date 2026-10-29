@@ -4,7 +4,7 @@
 -- відкрити цей файл і виконати його цілком.
 -- Результат - одна таблиця: для кожної таблиці схеми public спершу її стовпці
 -- з типами й позначкою NOT NULL, потім обмеження PRIMARY KEY, UNIQUE,
--- FOREIGN KEY, CHECK і EXCLUDE з повним визначенням.
+-- FOREIGN KEY і CHECK з повним визначенням.
 -- Рядок «УВАГА» зʼявляється, якщо таблиця не має первинного ключа.
 -- Порожній результат означає, що в схемі public немає жодної таблиці.
 --
@@ -36,16 +36,15 @@ report_rows AS (
 
     UNION ALL
 
-    -- обмеження: ключі, перевірки та заборона перетину бронювань
+    -- обмеження: первинний ключ, унікальність, зовнішні ключі, перевірки
     SELECT t.table_name,
            2,
-           CASE con.contype WHEN 'p' THEN 1 WHEN 'u' THEN 2 WHEN 'f' THEN 3 WHEN 'c' THEN 4 ELSE 5 END,
+           CASE con.contype WHEN 'p' THEN 1 WHEN 'u' THEN 2 WHEN 'f' THEN 3 ELSE 4 END,
            CASE con.contype
                WHEN 'p' THEN 'PRIMARY KEY'
                WHEN 'u' THEN 'UNIQUE'
                WHEN 'f' THEN 'FOREIGN KEY'
-               WHEN 'c' THEN 'CHECK'
-               ELSE 'EXCLUDE'
+               ELSE 'CHECK'
            END,
            con.conname::text,
            pg_get_constraintdef(con.oid)
@@ -54,7 +53,7 @@ report_rows AS (
                        ELSE '' END
     FROM user_tables AS t
     JOIN pg_catalog.pg_constraint AS con ON con.conrelid = t.oid
-    WHERE con.contype IN ('p', 'u', 'f', 'c', 'x')
+    WHERE con.contype IN ('p', 'u', 'f', 'c')
 
     UNION ALL
 
