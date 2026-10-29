@@ -262,7 +262,7 @@ NAME              IMAGE           SERVICE    STATUS
 dbsa-postgres-1   postgres:18.6   postgres   Up
 ```
 
-Підключення pgAdmin: сервер `localhost`, порт `5432`, база `dbsa`, користувач `student`.
+pgAdmin відкривається за адресою `http://localhost:5050` (логін `admin@example.com`, пароль `admin123`). Додай сервер із довільною назвою; у вкладці Connection вкажи host `postgres`, port `5432`, maintenance database `dbsa`, username `student`, password `student`. Назва `postgres` працює всередині мережі Compose.
 
 Схема `public` у `dbsa` містить `clubs`, `clients`, `pcs`, `reservations`, `payments` і `tariffs`. На момент останньої перевірки всі шість таблиць порожні; наповнення даними не входить до цієї лабораторної. Базу `dbsa_check` використовуємо окремо для циклу перевірки міграцій.
 
@@ -294,7 +294,7 @@ dbsa-postgres-1   postgres:18.6   postgres   Up
 
 ## 10. Цикл up — down — up
 
-Цикл перевіряється в окремій порожній базі `dbsa_check`; основна схема лабораторної з даними залишається в `dbsa`. У `dbsa_check` застосовується `001 up`, потім `001 down`, перевіряється порожня схема, після чого `001 up` запускається повторно.
+Цикл перевіряється в окремій базі `dbsa_check`; основна база `dbsa` під час тесту не змінюється. У `dbsa_check` застосовується `001 up`, потім `001 down`, перевіряється порожня схема, після чого `001 up` запускається повторно.
 
 Результат [check-schema.sql](check-schema.sql) після першого `up`:
 
