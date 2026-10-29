@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS reservations;
+DROP TABLE IF EXISTS pcs;
+DROP TABLE IF EXISTS clients;
+DROP TABLE IF EXISTS tariffs;
+DROP FUNCTION IF EXISTS set_reservation_price();

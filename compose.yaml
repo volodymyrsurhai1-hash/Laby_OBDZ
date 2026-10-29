@@ -1,0 +1,33 @@
+# Файл опису середовища для лабораторних робіт курсу «Організація баз даних і знань».
+# PostgreSQL у контейнері; дані бази зберігаються в томі й переживають видалення контейнера.
+#
+# Команди виконуються в терміналі в каталозі з цим файлом (у Windows - PowerShell або Windows Terminal).
+# Перед запуском має працювати Docker Desktop (Windows, macOS) або служба Docker (Linux).
+# Після перезавантаження компʼютера середовище запускають знову командою docker compose up -d.
+#
+# Запуск:    docker compose up -d
+# Стан:      docker compose ps
+# Зупинка:   docker compose down       (контейнер видаляється, том із даними лишається)
+# Обережно:  docker compose down -v    (видаляє й том, а разом із ним - усі дані бази)
+#
+# Підключення pgAdmin: сервер localhost, порт 5432, база dbsa, користувач student, пароль student.
+# Пароль записано у файлі свідомо: це навчальне середовище на власному компʼютері.
+
+name: dbsa
+
+services:
+  postgres:
+    image: postgres:18.6
+    environment:
+      POSTGRES_USER: student
+      POSTGRES_PASSWORD: student
+      POSTGRES_DB: dbsa
+    ports:
+      # порт на компʼютері : порт у контейнері
+      - "5432:5432"
+    volumes:
+      # з PostgreSQL 18 том підключається до каталогу /var/lib/postgresql
+      - pgdata:/var/lib/postgresql
+
+volumes:
+  pgdata:
