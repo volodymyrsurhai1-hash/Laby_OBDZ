@@ -262,7 +262,7 @@ NAME              IMAGE           SERVICE    STATUS
 dbsa-postgres-1   postgres:18.6   postgres   Up
 ```
 
-pgAdmin відкривається за адресою `http://localhost:5050` (логін `admin@example.com`, пароль `admin123`). Додай сервер із довільною назвою; у вкладці Connection вкажи host `postgres`, port `5432`, maintenance database `dbsa`, username `student`, password `student`. Назва `postgres` працює всередині мережі Compose.
+Підключення DBeaver: host `localhost`, port `5432`, database `dbsa`, username `student`, password `student`.
 
 Схема `public` у `dbsa` містить `clubs`, `clients`, `pcs`, `reservations`, `payments` і `tariffs`. На момент останньої перевірки всі шість таблиць порожні; наповнення даними не входить до цієї лабораторної. Базу `dbsa_check` використовуємо окремо для циклу перевірки міграцій.
 
@@ -280,7 +280,7 @@ pgAdmin відкривається за адресою `http://localhost:5050` (
 
 ## 9. Перевірка обмежень
 
-Файл перевірок: [constraint-checks.sql](constraint-checks.sql). Кожен тестовий `INSERT` виконується окремо: виділи одну команду в pgAdmin і запусти її. PostgreSQL відхиляє цю команду; успішно вставлені тестові дані не залишаються.
+Файл перевірок: [constraint-checks.sql](constraint-checks.sql). Кожен тестовий `INSERT` виконується окремо: виділи одну команду в DBeaver і запусти її. PostgreSQL відхиляє цю команду; успішно вставлені тестові дані не залишаються.
 
 | Правило | Обмеження | Повідомлення PostgreSQL |
 |---|---|---|

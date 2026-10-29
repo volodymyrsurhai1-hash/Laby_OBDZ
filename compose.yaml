@@ -10,8 +10,8 @@
 # Зупинка:   docker compose down       (контейнер видаляється, том із даними лишається)
 # Обережно:  docker compose down -v    (видаляє й том, а разом із ним - усі дані бази)
 #
-# pgAdmin: http://localhost:5050; в pgAdmin host postgres, порт 5432, база dbsa.
-# Для DBeaver із хоста: localhost:5432. Облікові дані навчальні й навмисно вказані тут.
+# Підключення DBeaver: localhost, порт 5432, база dbsa, користувач student.
+# Облікові дані навчальні й навмисно вказані тут.
 
 name: dbsa
 
@@ -28,18 +28,5 @@ services:
     volumes:
       # з PostgreSQL 18 том підключається до каталогу /var/lib/postgresql
       - pgdata:/var/lib/postgresql
-  pgadmin:
-    image: dpage/pgadmin4:9.11
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
-    ports:
-      - "5050:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    depends_on:
-      - postgres
-
 volumes:
   pgdata:
-  pgadmin_data:
