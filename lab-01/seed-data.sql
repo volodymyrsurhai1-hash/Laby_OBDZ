@@ -34,16 +34,14 @@ new_reservations AS (
         pc_id,
         starts_at,
         ends_at,
-        status,
-        agreed_price_per_hour
+        status
     )
     SELECT
         client.client_id,
         pc.pc_id,
         CURRENT_TIMESTAMP + INTERVAL '1 day',
         CURRENT_TIMESTAMP + INTERVAL '1 day 3 hours',
-        'active',
-        0
+        'active'
     FROM new_pcs AS pc
     JOIN (VALUES
         (1, '+380000000091'),
@@ -56,18 +54,18 @@ new_reservations AS (
         reservation_id,
         pc_id,
         client_id,
-        agreed_price_per_hour,
         ends_at,
         starts_at
 ),
 new_payments AS (
     INSERT INTO payments (reservation_id, amount, payment_method)
-    SELECT
-        reservation_id,
-        agreed_price_per_hour
-            * EXTRACT(EPOCH FROM (ends_at - starts_at)) / 3600,
+    SELECT reservation.reservation_id,
+        tariff.price_per_hour
+            * EXTRACT(EPOCH FROM (reservation.ends_at - reservation.starts_at)) / 3600,
         'card'
-    FROM new_reservations
+    FROM new_reservations AS reservation
+    JOIN pcs AS pc ON pc.pc_id = reservation.pc_id
+    JOIN tariffs AS tariff ON tariff.tariff_id = pc.tariff_id
     RETURNING payment_id, reservation_id
 )
 SELECT
@@ -75,7 +73,7 @@ SELECT
     pc.seat_number,
     client.full_name AS client,
     reservation.reservation_id,
-    reservation.agreed_price_per_hour AS hourly_price,
+    tariff.price_per_hour AS hourly_price,
     payment.payment_id,
     payment.payment_id IS NOT NULL AS paid
 FROM new_reservations AS reservation
@@ -86,4 +84,7 @@ JOIN new_clients AS client
 JOIN new_payments AS payment
     ON payment.reservation_id = reservation.reservation_id
 CROSS JOIN new_club AS club
+CROSS JOIN new_tariff AS tariff_source
+JOIN tariffs AS tariff
+    ON tariff.tariff_id = tariff_source.tariff_id
 ORDER BY pc.seat_number;

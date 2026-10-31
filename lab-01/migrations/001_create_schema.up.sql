@@ -42,8 +42,6 @@ CREATE TABLE reservations (
     ends_at timestamptz NOT NULL,
     status text NOT NULL DEFAULT 'active'
         CHECK (status IN ('active', 'cancelled')),
-    agreed_price_per_hour numeric NOT NULL
-        CHECK (agreed_price_per_hour >= 0),
     CONSTRAINT reservations_valid_interval CHECK (ends_at > starts_at),
     CONSTRAINT reservations_no_active_overlap
         EXCLUDE USING gist (
@@ -53,20 +51,18 @@ CREATE TABLE reservations (
         WHERE (status = 'active')
 );
 
-CREATE FUNCTION set_reservation_price()
+CREATE FUNCTION check_reservation_pc_active()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 DECLARE
     pc_is_active boolean;
     club_is_active boolean;
-    pc_price numeric;
 BEGIN
-    SELECT p.is_active, c.is_active, t.price_per_hour
-    INTO pc_is_active, club_is_active, pc_price
+    SELECT p.is_active, c.is_active
+    INTO pc_is_active, club_is_active
     FROM pcs AS p
     JOIN clubs AS c ON c.club_id = p.club_id
-    JOIN tariffs AS t ON t.tariff_id = p.tariff_id
     WHERE p.pc_id = NEW.pc_id;
 
     IF NOT FOUND THEN
@@ -74,25 +70,19 @@ BEGIN
             USING ERRCODE = '23503';
     END IF;
 
-    IF NOT club_is_active THEN
-        RAISE EXCEPTION 'Club for PC % is inactive and cannot be reserved', NEW.pc_id
+    IF NOT pc_is_active OR NOT club_is_active THEN
+        RAISE EXCEPTION 'PC % or its club is inactive and cannot be reserved', NEW.pc_id
             USING ERRCODE = '23514';
     END IF;
 
-    IF NOT pc_is_active THEN
-        RAISE EXCEPTION 'PC % is inactive and cannot be reserved', NEW.pc_id
-            USING ERRCODE = '23514';
-    END IF;
-
-    NEW.agreed_price_per_hour := pc_price;
     RETURN NEW;
 END;
 $$;
 
-CREATE TRIGGER reservations_set_price
+CREATE TRIGGER reservations_check_pc_active
 BEFORE INSERT OR UPDATE OF pc_id ON reservations
 FOR EACH ROW
-EXECUTE FUNCTION set_reservation_price();
+EXECUTE FUNCTION check_reservation_pc_active();
 
 CREATE TABLE payments (
     payment_id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

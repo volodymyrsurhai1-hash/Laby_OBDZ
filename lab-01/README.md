@@ -6,7 +6,7 @@
 
 ## 1. Предметна область
 
-Мережа кіберклубів надає клієнтам компʼютерні місця для гри за спільними для мережі погодинними тарифами. Кожне місце належить конкретному клубу; його номер унікальний у межах клубу, а внутрішній ідентифікатор ПК унікальний у мережі. Клієнт бронює конкретне місце на визначений проміжок часу; система не дозволяє накладати активні бронювання одного ПК. Бронювання одразу резервує час, а оплату можна зареєструвати пізніше одним платежем. Погодинна ціна фіксується під час створення бронювання.
+Мережа кіберклубів надає клієнтам компʼютерні місця для гри за спільними для мережі погодинними тарифами. Кожне місце належить конкретному клубу; його номер унікальний у межах клубу, а внутрішній ідентифікатор ПК унікальний у мережі. Клієнт бронює конкретне місце на визначений проміжок часу; система не дозволяє накладати активні бронювання одного ПК. Бронювання одразу резервує час, а оплату можна зареєструвати пізніше одним платежем. Ціна для бронювання береться з поточного тарифу, призначеного ПК.
 
 ## 2. Бізнес-правила
 
@@ -16,13 +16,13 @@
 | 2 | `pc_id` є глобальним ID компʼютера, а номер місця додатний і унікальний у межах клубу | схема | `IDENTITY`, `CHECK`, `UNIQUE (club_id, seat_number)` |
 | 3 | Кожен ПК має один призначений тариф, який існує | схема | `NOT NULL`, `FOREIGN KEY` |
 | 4 | Назва тарифу унікальна і не порожня | схема | `UNIQUE`, `CHECK` |
-| 5 | Ціна тарифу та зафіксована ціна бронювання не можуть бути відʼємними; нуль дозволений | схема | `CHECK (price >= 0)` |
+| 5 | Ціна тарифу не може бути відʼємною; нуль дозволений | схема | `CHECK (price_per_hour >= 0)` |
 | 6 | Бронювання належить одному наявному клієнту й одному наявному ПК | схема | `NOT NULL`, `FOREIGN KEY` |
 | 7 | Час закінчення бронювання має бути пізніше часу початку | схема | `CHECK (ends_at > starts_at)` |
 | 8 | Активні бронювання одного ПК не перетинаються; скасовані не займають час | схема | обмеження `EXCLUDE` для часових інтервалів |
 | 9 | Дозволені сусідні бронювання, якщо одне закінчується рівно тоді, коли починається наступне | схема | інтервал напіввідкритий: `[початок, кінець)` |
 | 10 | Неактивний ПК не можна забронювати | схема | тригер перевіряє `pcs.is_active` |
-| 11 | Ціна бронювання автоматично копіюється з тарифу ПК і зберігається при подальшій зміні тарифу | схема | тригер встановлює історичну `agreed_price_per_hour` |
+| 11 | Ціна для бронювання визначається тарифом, призначеним ПК | через звʼязок таблиць | `reservations.pc_id → pcs.tariff_id → tariffs.price_per_hour` |
 | 12 | Статуси бронювання — `active` або `cancelled`; завершення визначається за `ends_at` | схема та запит | `CHECK`; окремий статус «завершена» не зберігається |
 | 13 | ПК належить одному клубу; номер місця може повторюватися в різних клубах | схема | `NOT NULL`, `FOREIGN KEY`, `UNIQUE (club_id, seat_number)` |
 | 14 | ПК у неактивному клубі не можна забронювати | схема | тригер перевіряє `clubs.is_active` |
@@ -96,7 +96,7 @@ erDiagram
 - Один клієнт може створити нуль або багато бронювань; кожне бронювання належить одному клієнту (1:N).
 - Один ПК може мати багато бронювань у різний час; кожне бронювання стосується одного ПК (1:N). Часові інтервали активних бронювань не перетинаються.
 - Одне бронювання може бути неоплаченим або мати один платіж; кожен платіж належить рівно одному бронюванню (1:0..1).
-- Тариф бронювання визначається через призначений ПК. Погоджена ціна копіюється в бронювання як історичне значення.
+- Ціна бронювання визначається поточним тарифом ПК через звʼязок таблиць; окрема ціна в `reservations` не зберігається.
 
 ### Перевірка за типовими помилками
 
@@ -147,7 +147,7 @@ erDiagram
 | `tariffs` | `name UNIQUE` | `name → tariff_id, price_per_hour` |
 | `pcs` | `pc_id` | `pc_id → club_id, seat_number, tariff_id, is_active` |
 | `pcs` | `(club_id, seat_number) UNIQUE` | `(club_id, seat_number) → pc_id, tariff_id, is_active` |
-| `reservations` | `reservation_id` | `reservation_id → client_id, pc_id, starts_at, ends_at, status, agreed_price_per_hour` |
+| `reservations` | `reservation_id` | `reservation_id → client_id, pc_id, starts_at, ends_at, status` |
 | `payments` | `payment_id` | `payment_id → reservation_id, amount, payment_method, paid_at` |
 | `payments` | `reservation_id UNIQUE` | `reservation_id → payment_id, amount, payment_method, paid_at` |
 
@@ -161,7 +161,7 @@ erDiagram
 reservation_id, client_id, full_name, phone,
 pc_id, club_id, club_name, address, seat_number,
 tariff_id, tariff_name, current_price,
-starts_at, ends_at, agreed_price_per_hour,
+starts_at, ends_at,
 payment_id, amount, payment_method, paid_at
 ```
 
@@ -179,7 +179,7 @@ payment_id, amount, payment_method, paid_at
 - **2NF:** кожна таблиця має одностовпцевий первинний ключ (`club_id`, `client_id`, `tariff_id`, `pc_id`, `reservation_id` або `payment_id`). Тому немає неключових атрибутів, залежних лише від частини первинного ключа. Унікальний складений ключ ПК `(club_id, seat_number)` також визначає атрибути одного ПК цілком.
 - **3NF:** дані клубу, клієнта, тарифу й ПК не зберігаються повторно в `reservations` або `payments`; ці таблиці посилаються на них через FK. Отже, описові атрибути залежать від ключа своєї таблиці, а не від іншого неключового атрибута.
 
-`agreed_price_per_hour` у `reservations` — навмисний історичний знімок ціни на момент бронювання. Поточна ціна належить `tariffs`, а тригер копіює її у бронювання, щоб наступна зміна тарифу не переписала історичну домовленість. Це свідоме дублювання значення з різним змістом («поточна ціна» та «ціна погодженого бронювання»), а не твердження, що обидві ціни завжди однакові.
+Ціна не дублюється в `reservations`: її можна отримати з `tariffs`, зʼєднавши бронювання з ПК за `pc_id`, а ПК — з тарифом за `tariff_id`. Тому зміна тарифу змінює ціну, яку запит поверне і для старих бронювань.
 
 ## 6. Реляційна схема
 
@@ -220,7 +220,6 @@ erDiagram
         timestamptz starts_at
         timestamptz ends_at
         text status
-        numeric agreed_price_per_hour
     }
     payments {
         integer payment_id PK
@@ -249,7 +248,7 @@ dbsa-postgres-1   postgres:18.6   postgres   Up
 
 Підключення DBeaver: host `localhost`, port `5432`, database `dbsa`, username `student`, password `student`.
 
-Схема `public` у `dbsa` містить `clubs`, `clients`, `pcs`, `reservations`, `payments` і `tariffs`. На момент останньої перевірки всі шість таблиць порожні; наповнення даними не входить до цієї лабораторної. Базу `dbsa_check` використовуємо окремо для циклу перевірки міграцій.
+Міграція `001` створює шість таблиць: `clubs`, `clients`, `pcs`, `reservations`, `payments` і `tariffs`. У `reservations` немає окремої ціни: її отримують через тариф, призначений ПК. Наявну базу тут не змінювали; якщо в ній уже є стара версія схеми з `agreed_price_per_hour`, сама зміна SQL-файлу її не оновить. Повторний запуск `down` видалить таблиці й усі їхні дані.
 
 Для демонстраційних даних є окремий [seed-data.sql](seed-data.sql). Він додає один клуб, два місця, тариф, двох клієнтів, бронювання та оплати; файл можна виконати один раз після міграції `001 up`. Наповнення не є обовʼязковою частиною цієї лабораторної.
 
@@ -261,7 +260,7 @@ dbsa-postgres-1   postgres:18.6   postgres   Up
 
 - Міграція 001: [migrations/001_create_schema.up.sql](migrations/001_create_schema.up.sql), [migrations/001_create_schema.down.sql](migrations/001_create_schema.down.sql). Вона створює всю погоджену схему мережі кіберклубів із шести сутностей.
 - `reservations_no_active_overlap` — обмеження `EXCLUDE` за ПК і часовим інтервалом; скасовані бронювання не враховуються. Воно перевірене тестовим SQL, оскільки наданий скрипт `check-schema.sql` показує обмеження типів `PRIMARY KEY`, `UNIQUE`, `FOREIGN KEY` і `CHECK`.
-- Тригер `reservations_set_price` викликає `set_reservation_price()` перед вставленням бронювання або зміною його ПК. Функція перевіряє активність ПК і клубу та записує тарифну ціну у `agreed_price_per_hour`; неактивний ПК/клуб відхиляється.
+- Тригер `reservations_check_pc_active` викликає `check_reservation_pc_active()` перед вставленням бронювання або зміною його ПК. Функція лише перевіряє, що ПК і клуб активні; ціни в бронюванні немає.
 - Один платіж належить одній броні; `UNIQUE` на `payments.reservation_id` забороняє повторну оплату в цій моделі. `paid_at` за замовчуванням отримує час реєстрації платежу.
 - Для індексації виключення використовується розширення PostgreSQL `btree_gist`. Міграція `down` прибирає таблиці й тригерну функцію, але залишає розширення, щоб не видаляти його, якщо воно використовується іншими обʼєктами бази.
 
@@ -277,76 +276,8 @@ dbsa-postgres-1   postgres:18.6   postgres   Up
 | ID тарифу — первинний ключ | `PRIMARY KEY` | `duplicate key value violates unique constraint "tariffs_pkey"` |
 | Платіж посилається на наявне бронювання | `FOREIGN KEY` | `insert or update on table "payments" violates foreign key constraint "payments_reservation_id_fkey"` |
 
-Додатково перевірено: номер місця унікальний у клубі; некоректний інтервал і бронювання в неактивному клубі або на неактивному ПК відхиляються; сусідні інтервали й бронювання скасованого часу дозволені; ціна старої броні не змінюється після зміни тарифу.
+Додатково перевірено: номер місця унікальний у клубі; некоректний інтервал і бронювання в неактивному клубі або на неактивному ПК відхиляються; сусідні інтервали й бронювання скасованого часу дозволені.
 
 ## 10. Цикл up — down — up
 
-Цикл перевіряється в окремій базі `dbsa_check`; основна база `dbsa` під час тесту не змінюється. У `dbsa_check` застосовується `001 up`, потім `001 down`, перевіряється порожня схема, після чого `001 up` запускається повторно.
-
-Результат [check-schema.sql](check-schema.sql) після першого `up`:
-
-```text
-  table_name  |    kind     |                   name                   |                                       definition
---------------+-------------+------------------------------------------+-----------------------------------------------------------------------------------------
-clients       | стовпець    | client_id                                | integer NOT NULL GENERATED AS IDENTITY
-clients       | стовпець    | full_name                                | text NOT NULL
-clients       | стовпець    | phone                                    | text NOT NULL
-clients       | PRIMARY KEY | clients_pkey                             | PRIMARY KEY (client_id)
-clients       | UNIQUE      | clients_phone_key                        | UNIQUE (phone)
-clients       | CHECK       | clients_full_name_check                  | CHECK ((btrim(full_name) <> ''::text))
-clients       | CHECK       | clients_phone_check                      | CHECK ((btrim(phone) <> ''::text))
-clubs         | стовпець    | club_id                                  | integer NOT NULL GENERATED ALWAYS AS IDENTITY
-clubs         | стовпець    | name                                     | text NOT NULL
-clubs         | стовпець    | address                                  | text NOT NULL
-clubs         | стовпець    | is_active                                | boolean NOT NULL
-clubs         | PRIMARY KEY | clubs_pkey                               | PRIMARY KEY (club_id)
-clubs         | CHECK       | clubs_address_check                      | CHECK ((btrim(address) <> ''::text))
-clubs         | CHECK       | clubs_name_check                         | CHECK ((btrim(name) <> ''::text))
-payments      | стовпець    | payment_id                               | integer NOT NULL GENERATED ALWAYS AS IDENTITY
-payments      | стовпець    | reservation_id                           | integer NOT NULL
-payments      | стовпець    | amount                                   | numeric NOT NULL
-payments      | стовпець    | payment_method                           | text NOT NULL
-payments      | стовпець    | paid_at                                  | timestamp with time zone NOT NULL
-payments      | PRIMARY KEY | payments_pkey                            | PRIMARY KEY (payment_id)
-payments      | UNIQUE      | payments_reservation_id_key              | UNIQUE (reservation_id)
-payments      | FOREIGN KEY | payments_reservation_id_fkey             | FOREIGN KEY (reservation_id) REFERENCES reservations(reservation_id) ON DELETE RESTRICT
-payments      | CHECK       | payments_amount_check                    | CHECK ((amount >= (0)::numeric))
-payments      | CHECK       | payments_payment_method_check            | CHECK ((payment_method = ANY (ARRAY['cash'::text, 'card'::text, 'online'::text])))
-pcs           | стовпець    | pc_id                                    | integer NOT NULL GENERATED BY DEFAULT AS IDENTITY
-pcs           | стовпець    | club_id                                  | integer NOT NULL
-pcs           | стовпець    | seat_number                              | integer NOT NULL
-pcs           | стовпець    | is_active                                | boolean NOT NULL
-pcs           | стовпець    | tariff_id                                | integer NOT NULL
-pcs           | PRIMARY KEY | pcs_pkey                                 | PRIMARY KEY (pc_id)
-pcs           | UNIQUE      | pcs_club_seat_unique                     | UNIQUE (club_id, seat_number)
-pcs           | FOREIGN KEY | pcs_club_id_fkey                         | FOREIGN KEY (club_id) REFERENCES clubs(club_id) ON DELETE RESTRICT
-pcs           | FOREIGN KEY | pcs_tariff_id_fkey                       | FOREIGN KEY (tariff_id) REFERENCES tariffs(tariff_id) ON DELETE RESTRICT
-pcs           | CHECK       | pcs_pc_id_check                          | CHECK ((pc_id > 0))
-pcs           | CHECK       | pcs_seat_number_check                    | CHECK ((seat_number > 0))
-reservations  | стовпець    | reservation_id                           | integer NOT NULL GENERATED ALWAYS AS IDENTITY
-reservations  | стовпець    | client_id                                | integer NOT NULL
-reservations  | стовпець    | pc_id                                    | integer NOT NULL
-reservations  | стовпець    | starts_at                                | timestamp with time zone NOT NULL
-reservations  | стовпець    | ends_at                                  | timestamp with time zone NOT NULL
-reservations  | стовпець    | status                                   | text NOT NULL
-reservations  | стовпець    | agreed_price_per_hour                    | numeric NOT NULL
-reservations  | PRIMARY KEY | reservations_pkey                        | PRIMARY KEY (reservation_id)
-reservations  | FOREIGN KEY | reservations_client_id_fkey              | FOREIGN KEY (client_id) REFERENCES clients(client_id) ON DELETE RESTRICT
-reservations  | FOREIGN KEY | reservations_pc_id_fkey                  | FOREIGN KEY (pc_id) REFERENCES pcs(pc_id) ON DELETE RESTRICT
-reservations  | CHECK       | reservations_agreed_price_per_hour_check | CHECK ((agreed_price_per_hour >= (0)::numeric))
-reservations  | CHECK       | reservations_status_check                | CHECK ((status = ANY (ARRAY['active'::text, 'cancelled'::text])))
-reservations  | CHECK       | reservations_valid_interval              | CHECK ((ends_at > starts_at))
-tariffs       | стовпець    | tariff_id                                | integer NOT NULL GENERATED ALWAYS AS IDENTITY
-tariffs       | стовпець    | name                                     | text NOT NULL
-tariffs       | стовпець    | price_per_hour                           | numeric NOT NULL
-tariffs       | PRIMARY KEY | tariffs_pkey                             | PRIMARY KEY (tariff_id)
-tariffs       | UNIQUE      | tariffs_name_key                         | UNIQUE (name)
-tariffs       | CHECK       | tariffs_name_not_blank                   | CHECK ((btrim(name) <> ''::text))
-tariffs       | CHECK       | tariffs_price_per_hour_check             | CHECK ((price_per_hour >= (0)::numeric))
-```
-
-Після `down`: результат перевірки порожній — таблиць у схемі `public` немає.
-
-Після повторного `up`: звіт збігається з першим; повторне створення `btree_gist` безпечне завдяки `IF NOT EXISTS`.
-
-Висновок звірки з діаграмою розділу 6: таблиці, ключі та звʼязки відповідають реляційній схемі; додаткове обмеження `EXCLUDE` реалізує правило зайнятості ПК.
+Поточний файл `001` у репозиторії створює схему без `agreed_price_per_hour` і з простішою функцією перевірки активності ПК та клубу. Цю редакцію ще не запускали в базі: цикл up — down — up і вивід `check-schema.sql` потрібно оновити після її перевірки. Існуюча база не змінюється автоматично при редагуванні SQL-файлу.
