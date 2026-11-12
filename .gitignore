@@ -1,0 +1,7 @@
+# Lecture files are kept locally and are not uploaded to the repository.
+/lect/
+/lectures/
+
+# Operating-system files.
+.DS_Store
+Thumbs.db
