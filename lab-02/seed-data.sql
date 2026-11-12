@@ -1,106 +1,70 @@
--- Ідемпотентне демонстраційне наповнення: клуб, тариф, два ПК,
--- два клієнти, два бронювання та оплати за них.
-
-BEGIN;
-
-INSERT INTO clubs (name, address)
-SELECT 'Demo Club', '1 Example Street'
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM clubs
-    WHERE name = 'Demo Club'
-      AND address = '1 Example Street'
-);
+-- Наповнення кіберклубів: п'ять тарифів, вісім клієнтів, чотири клуби,
+-- шість ПК, дванадцять бронювань і сім оплат.
+-- Перед запуском застосуйте міграції 001 і 002 до порожньої бази.
+-- Зовнішні ключі відповідають ID, які початкові міграції створюють у порожній БД.
 
 INSERT INTO tariffs (name, price_per_hour)
-VALUES ('Demo Tariff', 200)
+VALUES
+    ('Basic', 100),
+    ('Standard', 150),
+    ('Evening', 180),
+    ('Club Rate', 250),
+    ('Premium', 300)
 ON CONFLICT (name) DO NOTHING;
 
-INSERT INTO clients (full_name, phone)
+INSERT INTO clients (full_name, phone, email)
 VALUES
-    ('Demo Customer 1', '+380000000091'),
-    ('Demo Customer 2', '+380000000092')
+    ('Alice Anderson', '+380000000301', 'alice@cyber.test'),
+    ('Andrew Baker', '+380000000302', NULL),
+    ('Anna Brown', '+380000000303', 'anna@example.test'),
+    ('Aaron Carter', '+380000000304', 'aaron@cyber.test'),
+    ('Bob Davis', '+380000000305', 'bob@example.test'),
+    ('Bella Evans', '+380000000306', NULL),
+    ('Charlie Foster', '+380000000307', 'charlie@cyber.test'),
+    ('Dana Green', '+380000000401', NULL)
 ON CONFLICT (phone) DO NOTHING;
 
+INSERT INTO clubs (name, address)
+VALUES
+    ('Cyber Club Center', '1 Main Street'),
+    ('Cyber Club Riverside', '2 River Street'),
+    ('Cyber Club Campus', '3 Campus Street'),
+    ('Cyber Club Empty', '4 Empty Street')
+ON CONFLICT (name, address) DO NOTHING;
+
 INSERT INTO pcs (club_id, seat_number, tariff_id)
-SELECT club.club_id, seat.seat_number, tariff.tariff_id
-FROM clubs AS club
-CROSS JOIN tariffs AS tariff
-CROSS JOIN (VALUES (1), (2)) AS seat(seat_number)
-WHERE club.name = 'Demo Club'
-  AND club.address = '1 Example Street'
-  AND tariff.name = 'Demo Tariff'
+VALUES
+    (1, 1, 1),
+    (1, 2, 2),
+    (1, 3, 3),
+    (2, 1, 1),
+    (2, 2, 5),
+    (3, 1, 2)
 ON CONFLICT (club_id, seat_number) DO NOTHING;
 
 INSERT INTO reservations (client_id, pc_id, starts_at, ends_at, status)
-SELECT client.client_id,
-       pc.pc_id,
-       TIMESTAMPTZ '2030-01-10 18:00:00+02',
-       TIMESTAMPTZ '2030-01-10 21:00:00+02',
-       'active'
-FROM clients AS client
-JOIN pcs AS pc
-  ON pc.seat_number = CASE client.phone
-      WHEN '+380000000091' THEN 1
-      WHEN '+380000000092' THEN 2
-  END
-JOIN clubs AS club
-  ON club.club_id = pc.club_id
-WHERE client.phone IN ('+380000000091', '+380000000092')
-  AND club.name = 'Demo Club'
-  AND club.address = '1 Example Street'
-  AND NOT EXISTS (
-      SELECT 1
-      FROM reservations AS existing
-      WHERE existing.client_id = client.client_id
-        AND existing.pc_id = pc.pc_id
-  );
+VALUES
+    (1, 1, TIMESTAMPTZ '2026-03-01 10:00:00+02', TIMESTAMPTZ '2026-03-01 12:00:00+02', 'active'),
+    (2, 1, TIMESTAMPTZ '2026-03-01 12:00:00+02', TIMESTAMPTZ '2026-03-01 14:00:00+02', 'active'),
+    (3, 2, TIMESTAMPTZ '2026-03-02 18:00:00+02', TIMESTAMPTZ '2026-03-02 20:00:00+02', 'cancelled'),
+    (4, 2, TIMESTAMPTZ '2026-03-02 18:00:00+02', TIMESTAMPTZ '2026-03-02 20:00:00+02', 'active'),
+    (5, 3, TIMESTAMPTZ '2026-03-03 09:00:00+02', TIMESTAMPTZ '2026-03-03 12:00:00+02', 'active'),
+    (6, 4, TIMESTAMPTZ '2026-03-05 10:00:00+02', TIMESTAMPTZ '2026-03-05 12:00:00+02', 'active'),
+    (7, 5, TIMESTAMPTZ '2026-03-10 14:00:00+02', TIMESTAMPTZ '2026-03-10 16:00:00+02', 'active'),
+    (1, 6, TIMESTAMPTZ '2026-03-15 18:00:00+02', TIMESTAMPTZ '2026-03-15 20:00:00+02', 'active'),
+    (2, 5, TIMESTAMPTZ '2026-03-31 18:30:00+02', TIMESTAMPTZ '2026-03-31 20:30:00+02', 'active'),
+    (3, 6, TIMESTAMPTZ '2026-04-05 12:00:00+02', TIMESTAMPTZ '2026-04-05 14:00:00+02', 'active'),
+    (4, 1, TIMESTAMPTZ '2026-04-09 16:00:00+02', TIMESTAMPTZ '2026-04-09 18:00:00+02', 'active'),
+    (5, 4, TIMESTAMPTZ '2026-04-20 09:00:00+02', TIMESTAMPTZ '2026-04-20 10:00:00+02', 'active')
+ON CONFLICT (client_id, pc_id, starts_at, ends_at, status) DO NOTHING;
 
 INSERT INTO payments (reservation_id, amount, payment_method)
-SELECT reservation.reservation_id,
-       tariff.price_per_hour
-           * EXTRACT(EPOCH FROM (reservation.ends_at - reservation.starts_at)) / 3600,
-       'card'
-FROM reservations AS reservation
-JOIN clients AS client
-  ON client.client_id = reservation.client_id
-JOIN pcs AS pc
-  ON pc.pc_id = reservation.pc_id
-JOIN clubs AS club
-  ON club.club_id = pc.club_id
-JOIN tariffs AS tariff
-  ON tariff.tariff_id = pc.tariff_id
-WHERE client.phone IN ('+380000000091', '+380000000092')
-  AND club.name = 'Demo Club'
-  AND club.address = '1 Example Street'
-  AND NOT EXISTS (
-      SELECT 1
-      FROM payments AS existing
-      WHERE existing.reservation_id = reservation.reservation_id
-  )
+VALUES
+    (1, 200, 'card'),
+    (4, 300, 'cash'),
+    (5, 540, 'online'),
+    (6, 200, 'card'),
+    (8, 300, 'online'),
+    (10, 300, 'cash'),
+    (12, 100, 'cash')
 ON CONFLICT (reservation_id) DO NOTHING;
-
-COMMIT;
-
-SELECT client.full_name,
-       pc.seat_number,
-       reservation.reservation_id,
-       tariff.price_per_hour,
-       payment.amount,
-       payment.payment_method,
-       payment.paid_at
-FROM reservations AS reservation
-JOIN clients AS client
-  ON client.client_id = reservation.client_id
-JOIN pcs AS pc
-  ON pc.pc_id = reservation.pc_id
-JOIN clubs AS club
-  ON club.club_id = pc.club_id
-JOIN tariffs AS tariff
-  ON tariff.tariff_id = pc.tariff_id
-LEFT JOIN payments AS payment
-  ON payment.reservation_id = reservation.reservation_id
-WHERE client.phone IN ('+380000000091', '+380000000092')
-  AND club.name = 'Demo Club'
-  AND club.address = '1 Example Street'
-ORDER BY pc.seat_number;
