@@ -1,12 +1,14 @@
 -- Операція: створити бронювання та внести оплату в одній транзакції.
 -- Значення client_id = 8 і pc_id = 6 відповідають seed-data.sql у порожній БД.
+-- Для повторного запуску використовуються нові явні ID після seed-рядків.
 
 -- Частина 1. COMMIT: бронювання й оплата зберігаються разом.
 BEGIN;
-INSERT INTO reservations (client_id, pc_id, starts_at, ends_at, status)
-VALUES (8, 6, TIMESTAMPTZ '2032-05-01 10:00:00+02',
+INSERT INTO reservations (reservation_id, client_id, pc_id, starts_at, ends_at, status)
+OVERRIDING SYSTEM VALUE
+VALUES (13, 8, 6, TIMESTAMPTZ '2032-05-01 10:00:00+02',
         TIMESTAMPTZ '2032-05-01 12:00:00+02', 'active')
-ON CONFLICT (client_id, pc_id, starts_at, ends_at, status) DO NOTHING;
+ON CONFLICT (reservation_id) DO NOTHING;
 
 INSERT INTO payments (reservation_id, amount, payment_method)
 SELECT reservation_id, 300, 'card'
@@ -16,6 +18,8 @@ WHERE client_id = 8
   AND starts_at = TIMESTAMPTZ '2032-05-01 10:00:00+02'
 ON CONFLICT (reservation_id) DO NOTHING;
 COMMIT;
+
+SELECT setval(pg_get_serial_sequence('reservations', 'reservation_id'), (SELECT MAX(reservation_id) FROM reservations));
 
 SELECT reservation.reservation_id, client.full_name,
        payment.amount, payment.payment_method
@@ -30,10 +34,11 @@ WHERE reservation.client_id = 8
 
 -- Частина 2. ROLLBACK: в іншому часовому слоті обидва рядки скасовуються.
 BEGIN;
-INSERT INTO reservations (client_id, pc_id, starts_at, ends_at, status)
-VALUES (8, 6, TIMESTAMPTZ '2032-05-02 10:00:00+02',
+INSERT INTO reservations (reservation_id, client_id, pc_id, starts_at, ends_at, status)
+OVERRIDING SYSTEM VALUE
+VALUES (14, 8, 6, TIMESTAMPTZ '2032-05-02 10:00:00+02',
         TIMESTAMPTZ '2032-05-02 12:00:00+02', 'active')
-ON CONFLICT (client_id, pc_id, starts_at, ends_at, status) DO NOTHING;
+ON CONFLICT (reservation_id) DO NOTHING;
 
 INSERT INTO payments (reservation_id, amount, payment_method)
 SELECT reservation_id, 300, 'cash'
@@ -60,10 +65,11 @@ WHERE client_id = 8
 
 -- Частина 3. Помилка після першої зміни відкочує і бронювання, і оплату.
 BEGIN;
-INSERT INTO reservations (client_id, pc_id, starts_at, ends_at, status)
-VALUES (8, 6, TIMESTAMPTZ '2032-05-03 10:00:00+02',
+INSERT INTO reservations (reservation_id, client_id, pc_id, starts_at, ends_at, status)
+OVERRIDING SYSTEM VALUE
+VALUES (15, 8, 6, TIMESTAMPTZ '2032-05-03 10:00:00+02',
         TIMESTAMPTZ '2032-05-03 12:00:00+02', 'active')
-ON CONFLICT (client_id, pc_id, starts_at, ends_at, status) DO NOTHING;
+ON CONFLICT (reservation_id) DO NOTHING;
 
 INSERT INTO payments (reservation_id, amount, payment_method)
 SELECT reservation_id, 300, 'wire'

@@ -1,28 +1,36 @@
 -- Запити виконувати окремо після lab-02/seed-data.sql.
 
--- Запит 1. Які клієнти з відомою електронною адресою мають ім'я на A?
+-- Запит 1. Які клієнти з бронюваннями й оплатами мають ім'я на A?
 -- Рядків: 2.
-SELECT client_id, full_name, phone, email
-FROM clients
-WHERE full_name LIKE 'A%'
-  AND email IS NOT NULL
-ORDER BY full_name, client_id
+SELECT DISTINCT client.client_id, client.full_name, client.phone
+FROM clients AS client
+JOIN reservations AS reservation
+  ON reservation.client_id = client.client_id
+LEFT JOIN payments AS payment
+  ON payment.reservation_id = reservation.reservation_id
+WHERE client.full_name LIKE 'A%'
+  AND payment.payment_id IS NOT NULL
+ORDER BY client.full_name, client.client_id
 LIMIT 2;
 
--- Запит 2. Які адреси не належать до домену example.test?
--- Без урахування NULL: 3 рядки. NULL дає UNKNOWN і не проходить WHERE.
-SELECT client_id, full_name, email
-FROM clients
-WHERE email NOT LIKE '%@example.test'
-ORDER BY client_id;
+-- Запит 2. Які бронювання не оплачені онлайн?
+-- Неоплачені бронювання не проходять умову через UNKNOWN. Рядків: 5.
+SELECT reservation.reservation_id, payment.payment_method
+FROM reservations AS reservation
+LEFT JOIN payments AS payment
+  ON payment.reservation_id = reservation.reservation_id
+WHERE payment.payment_method NOT LIKE 'online'
+ORDER BY reservation.reservation_id;
 
--- Виправлений запит 2: включити клієнтів без електронної адреси.
--- Рядків: 6.
-SELECT client_id, full_name, email
-FROM clients
-WHERE email IS NULL
-   OR email NOT LIKE '%@example.test'
-ORDER BY client_id;
+-- Виправлений запит 2: включити бронювання без оплати.
+-- Рядків: 10.
+SELECT reservation.reservation_id, payment.payment_method
+FROM reservations AS reservation
+LEFT JOIN payments AS payment
+  ON payment.reservation_id = reservation.reservation_id
+WHERE payment.payment_method IS NULL
+   OR payment.payment_method NOT LIKE 'online'
+ORDER BY reservation.reservation_id;
 
 -- Запит 3. Які тарифи коштують від 100 до 180 за годину включно?
 -- Рядків: 3.
@@ -49,13 +57,18 @@ WHERE payment_method IN ('cash', 'card')
 ORDER BY amount DESC, payment_id
 LIMIT 4;
 
--- Запит 6. Які клієнти без email або з ім'ям на B мають телефон заданого діапазону?
--- Дужки задають порядок OR перед AND. Рядків: 3.
-SELECT client_id, full_name, phone, email
-FROM clients
-WHERE (email IS NULL OR full_name LIKE 'B%')
-  AND phone LIKE '+38000000030%'
-ORDER BY client_id
+-- Запит 6. Які бронювання без оплати або скасовані належать клієнтам
+-- із телефоном заданого префікса? Дужки задають порядок OR перед AND.
+-- Рядків: 5.
+SELECT reservation.reservation_id, client.full_name, payment.payment_method
+FROM reservations AS reservation
+JOIN clients AS client
+  ON client.client_id = reservation.client_id
+LEFT JOIN payments AS payment
+  ON payment.reservation_id = reservation.reservation_id
+WHERE (payment.payment_id IS NULL OR reservation.status = 'cancelled')
+  AND client.phone LIKE '+38000000030%'
+ORDER BY reservation.reservation_id
 LIMIT 5;
 
 -- З'єднання 1. Які бронювання належать яким клієнтам?
