@@ -1,0 +1,46 @@
+# Файл опису середовища для лабораторної роботи №4 курсу «Організація баз даних і знань».
+# MongoDB і Redis у контейнерах; дані MongoDB зберігаються в томі й переживають видалення контейнера.
+#
+# Це окремий файл поруч із compose.yaml роботи №1: PostgreSQL з попередніх робіт лишається
+# запущеним, тому обидва середовища працюють одночасно і не заважають одне одному.
+#
+# Команди виконуються в терміналі в каталозі з цим файлом (у Windows - PowerShell або Windows Terminal).
+# Перед запуском має працювати Docker Desktop (Windows, macOS) або служба Docker (Linux).
+#
+# Запуск:    docker compose -f compose-nosql.yaml up -d
+# Стан:      docker compose -f compose-nosql.yaml ps
+# Зупинка:   docker compose -f compose-nosql.yaml down       (томи лишаються)
+# Обережно:  docker compose -f compose-nosql.yaml down -v    (видаляє й томи з даними)
+#
+# Підключення MongoDB Compass: mongodb://student:student@localhost:27017/?authSource=admin
+# Консоль Redis:               docker compose -f compose-nosql.yaml exec redis redis-cli
+#
+# Пароль MongoDB записано у файлі свідомо: це навчальне середовище на власному компʼютері.
+# Redis працює без пароля, бо звертаються до нього лише з консолі всередині того самого контейнера.
+
+name: dbsa-nosql
+
+services:
+  mongo:
+    image: mongo:8.3.11
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: student
+      MONGO_INITDB_ROOT_PASSWORD: student
+    ports:
+      # порт на компʼютері : порт у контейнері
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+
+  redis:
+    image: redis:8.10.1
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      # порт на компʼютері : порт у контейнері
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+volumes:
+  mongodata:
+  redisdata:

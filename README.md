@@ -4,9 +4,11 @@
 
 | Робота | Стан | Звіт | Методичні вказівки |
 |---|---|---|---|
-| №1 — моделювання та схема БД | Звіт і схема | [lab-01/README.md](lab-01/README.md) | [lab-01/instructions.pdf](lab-01/instructions.pdf) |
-| №2 — наповнення та запити | Звіт-заготовка; результати ще треба внести | [lab-02/README.md](lab-02/README.md) | [lab-02/instructions.pdf](lab-02/instructions.pdf) |
-| №3 — аналітика та звітність | Ще не виконана; є офіційна заготовка звіту | [lab-03/README.md](lab-03/README.md) | [lab-03/instructions.pdf](lab-03/instructions.pdf) |
+| №1 — моделювання та схема БД | Виконана | [lab-01/README.md](lab-01/README.md) | [lab-01/instructions.pdf](lab-01/instructions.pdf) |
+| №2 — наповнення та запити | Звіт потребує фінальних результатів | [lab-02/README.md](lab-02/README.md) | [lab-02/instructions.pdf](lab-02/instructions.pdf) |
+| №3 — аналітика та звітність | Виконана; локальний preview дашборда й CSV | [lab-03/README.md](lab-03/README.md) | [lab-03/instructions.pdf](lab-03/instructions.pdf) |
+| №4 — нереляційне зберігання | Виконана: MongoDB і Redis | [lab-04/README.md](lab-04/README.md) | `lab-04/lab-04.pdf` (локально) |
+| №5 — організація знань | Виконана: база правил і граф Neo4j | [lab-05/README.md](lab-05/README.md) | `lab-05/lab-05.pdf` (локально) |
 
 ## Спільне середовище
 

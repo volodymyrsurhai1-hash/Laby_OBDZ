@@ -1,0 +1,49 @@
+Redis 10-command exercise for paid revenue in March 2026.
+Run: docker compose -f lab-04\compose-nosql.yaml exec redis redis-cli
+The TTL experiment intentionally waits 30 seconds between commands 6 and 7.
+
+1) SET revenue:2026-03 1540.00
+   Actual response: OK
+
+2) GET revenue:2026-03
+   Actual redis-cli response: 1540.00 (a RESP bulk string, not a numeric Redis type)
+
+3) TTL revenue:2026-03
+   Actual response: (integer) -1
+
+4) EXPIRE revenue:2026-03 30
+   Actual response: (integer) 1
+
+5) TTL revenue:2026-03
+   Actual response in this run: (integer) 30
+
+6) EXISTS revenue:2026-03
+   Actual response: (integer) 1
+
+Wait at least 30 seconds, then:
+
+7) GET revenue:2026-03
+   Actual response: (nil)
+
+8) TTL revenue:2026-03
+   Actual response: (integer) -2
+
+9) SET revenue:2026-03 1540.00 EX 300
+   Actual response: OK
+
+10) INCR reservations:2026-03-12:count
+    Actual response on a clean key: (integer) 1
+
+Cache-aside demonstration:
+GET revenue:2026-03                             -> 1540.00 (cache hit)
+On a cache miss, query PostgreSQL:
+SELECT sum(payment.amount)
+FROM reservations AS reservation
+JOIN payments AS payment USING (reservation_id)
+WHERE reservation.starts_at >= TIMESTAMPTZ '2026-03-01 00:00:00+02'
+  AND reservation.starts_at <  TIMESTAMPTZ '2026-04-01 00:00:00+02';
+SET revenue:2026-03 1540.00 EX 300             -> OK
+GET revenue:2026-03                             -> 1540.00
+
+The CLI displays the bulk-string payload without quotation marks; the application receives
+text and must parse it as a decimal number before arithmetic.

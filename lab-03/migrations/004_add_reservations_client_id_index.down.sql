@@ -1,0 +1,1 @@
+DROP INDEX reservations_client_id_idx;
