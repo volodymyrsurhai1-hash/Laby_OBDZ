@@ -12,6 +12,8 @@ SELECT source_row,
            WHEN NOT pg_input_is_valid(club_id_raw, 'integer') THEN 'club_id is not an integer'
            WHEN NOT pg_input_is_valid(starts_at_raw, 'timestamp with time zone') THEN 'starts_at is not a valid timestamp'
            WHEN NOT pg_input_is_valid(ends_at_raw, 'timestamp with time zone') THEN 'ends_at is not a valid timestamp'
+           WHEN nullif(btrim(paid_amount_raw), '') IS NOT NULL
+                AND NOT pg_input_is_valid(paid_amount_raw, 'numeric') THEN 'paid_amount is not numeric'
        END
 FROM stage_reservations
 WHERE nullif(btrim(reservation_id_raw), '') IS NULL
@@ -24,6 +26,10 @@ WHERE nullif(btrim(reservation_id_raw), '') IS NULL
    OR NOT pg_input_is_valid(club_id_raw, 'integer')
    OR NOT pg_input_is_valid(starts_at_raw, 'timestamp with time zone')
    OR NOT pg_input_is_valid(ends_at_raw, 'timestamp with time zone')
+   OR (
+       nullif(btrim(paid_amount_raw), '') IS NOT NULL
+       AND NOT pg_input_is_valid(paid_amount_raw, 'numeric')
+   )
 ON CONFLICT (source_row) DO NOTHING;
 
 -- Convert only rows that passed the input checks.
@@ -35,7 +41,8 @@ SELECT stage.source_row,
        stage.club_id_raw::integer AS club_id,
        stage.starts_at_raw::timestamptz AS starts_at,
        stage.ends_at_raw::timestamptz AS ends_at,
-       stage.status_raw AS status
+       stage.status_raw AS status,
+       nullif(btrim(stage.paid_amount_raw), '')::numeric AS paid_amount
 FROM stage_reservations AS stage
 LEFT JOIN stage_rejects AS rejected USING (source_row)
 WHERE rejected.source_row IS NULL;
@@ -60,7 +67,7 @@ SELECT DISTINCT converted.reservation_id,
        club.club_key,
        converted.starts_at::date,
        round(extract(epoch FROM (converted.ends_at - converted.starts_at)) / 3600, 2),
-       0,
+       coalesce(converted.paid_amount, 0),
        converted.status
 FROM converted_stage_reservations AS converted
 JOIN dim_clubs AS club ON club.club_id = converted.club_id

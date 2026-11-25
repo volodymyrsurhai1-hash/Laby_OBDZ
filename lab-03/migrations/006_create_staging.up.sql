@@ -6,7 +6,8 @@ CREATE TABLE stage_reservations (
     club_id_raw text,
     starts_at_raw text,
     ends_at_raw text,
-    status_raw text
+    status_raw text,
+    paid_amount_raw text
 );
 
 CREATE TABLE stage_rejects (
