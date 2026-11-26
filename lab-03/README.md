@@ -141,13 +141,15 @@ Staging створюють [міграції 006 up](migrations/006_create_stagi
 
 ## 9. Показники та дашборд
 
-SQL: [dashboard-queries.sql](dashboard-queries.sql). CSV-експорти: [виручка](dashboard-revenue.csv), [бронювання за клубами](dashboard-clubs.csv), [денна виручка](dashboard-daily.csv). Вони зняті після завантаження staging; зображення — [локальне прев'ю](dashboard-preview.png), а не скриншот Looker Studio.
+SQL: [dashboard-queries.sql](dashboard-queries.sql). CSV-експорти: [виручка](dashboard-revenue.csv), [бронювання за клубами](dashboard-clubs.csv), [денна виручка](dashboard-daily.csv). Результати отримані після завантаження staging. Є [скриншот реального звіту Looker Studio](dashboard-looker-studio.png) та [локальне прев'ю](dashboard-preview.png).
 
 | Елемент | Показник | Результат |
 |---|---|---|
 | картка | оплачена виручка березня 2026 | 1540.00 |
 | стовпчикова діаграма | бронювання за клубами | Center 7; Riverside 4; Campus 2; Empty 0 |
 | часовий ряд | денна оплачена виручка | 200, 300, 540, 200, 300 на дні з оплатами |
+
+У Looker Studio фактично побудовано картку `revenue` зі значенням 1540, стовпчикову діаграму `club` / `reservation_count` і часовий ряд `day` / `revenue` за березень; пропущені дні мають нульову виручку.
 
 Клуб у другому запиті береться з виміру `dim_clubs`, отже `LEFT JOIN` додає й клуб без фактів. У запиті 6 розділу 1 перелік усіх клубів діставався з робочої таблиці `clubs` через `LEFT JOIN`, бо самі бронювання не містять рядка для порожнього клубу.
 
