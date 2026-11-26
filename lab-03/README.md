@@ -161,7 +161,9 @@ SQL: [dashboard-queries.sql](dashboard-queries.sql). CSV-експорти: [ви
 |---|---|---|---|
 | `dashboard-revenue.csv` | `period` — текст `YYYY-MM`; `revenue` — число | один рядок на місяць | картка: `SUM(revenue)` |
 | `dashboard-clubs.csv` | `club` — текст; `reservation_count` — ціле число | один рядок на клуб | стовпчикова діаграма: клуб / `SUM(reservation_count)` |
-| `dashboard-daily.csv` | `day` — дата; `revenue` — число | один рядок на календарний день березня, включно з нульовою виручкою | часовий ряд: дата / `SUM(revenue)` |
+| `dashboard-daily.csv` | `day` — дата у форматі `YYYYMMDD`; `revenue` — число | один рядок на календарний день березня, включно з нульовою виручкою | часовий ряд: `day` як Date / `SUM(revenue)` |
+
+У `dashboard-daily.csv` дата записана як `YYYYMMDD` (наприклад, `20260305`), щоб імпорт із різними локалями не переставляв день і місяць. У джерелі Looker Studio для поля `day` треба вказати тип **Date** і формат `YYYYMMDD`; у часовому ряді використати денну гранулярність.
 
 ## 10. Повний прогін і відтворюваність
 
