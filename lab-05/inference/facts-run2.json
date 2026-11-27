@@ -1,0 +1,8 @@
+[
+  "club_active",
+  "pc_active",
+  "requested_interval_valid",
+  "active_overlap_exists",
+  "client_has_at_least_two_active_reservations",
+  "request_confirmed"
+]

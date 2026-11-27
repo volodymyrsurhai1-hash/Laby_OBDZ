@@ -1,5 +1,5 @@
-// Execute in Neo4j Browser. All node and relationship creation uses MERGE.
-// The subgraph is copied from reservation IDs 1, 2, and 8 in lab-02/seed-data.sql.
+// Запусти в Neo4j Browser. Вершини й зв'язки створює MERGE.
+// Підграф узято з бронювань №1, №2 і №8 у lab-02/seed-data.sql.
 
 MERGE (c:Club {club_id: 1})
 SET c.name = 'Cyber Club Center', c.address = '1 Main Street', c.is_active = true;
@@ -74,7 +74,7 @@ SET booking.starts_at = datetime('2026-03-15T18:00:00+02:00'),
     booking.payment_amount = 300,
     booking.payment_method = 'online';
 
-// NEIGHBOUR_OF is extra area knowledge not stored in the relational schema.
+// NEIGHBOUR_OF — додане знання про сусідство клубів.
 MATCH (a:Club {club_id: 1})
 MATCH (b:Club {club_id: 2})
 MERGE (a)-[:NEIGHBOUR_OF]->(b);
@@ -85,6 +85,6 @@ MATCH (a:Club {club_id: 3})
 MATCH (b:Club {club_id: 4})
 MERGE (a)-[:NEIGHBOUR_OF]->(b);
 
-// Idempotence checks: after either run, expect 12 nodes and 12 relationships.
+// Перевірка повторного запуску: має бути 12 вузлів і 12 зв'язків.
 MATCH (n) RETURN count(n) AS nodes;
 MATCH ()-[r]->() RETURN count(r) AS relationships;

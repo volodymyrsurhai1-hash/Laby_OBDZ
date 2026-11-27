@@ -1,6 +1,6 @@
--- Run only once in the isolated dbsa_big database after schema and seed-data.sql.
+-- Run once in the same Lab 3 database, after exporting the seed-based dashboard CSVs.
 -- Generates 10,000 clients and 100,000 reservations without overlapping
--- intervals on a PC. Recreate dbsa_big before repeating this script.
+-- intervals on a PC. Do not run it a second time in this database.
 
 INSERT INTO clients (full_name, phone)
 SELECT 'Generated Client ' || n,

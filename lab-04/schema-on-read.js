@@ -1,4 +1,4 @@
-// Run in Mongosh after load-documents.js. The collection accepts different shapes.
+// Запустити після load-documents.js.
 printjson(db.pcs.insertOne({
   _id: 901,
   pc_id: 1,
@@ -20,7 +20,7 @@ printjson(db.pcs.insertOne({
   gpu_model: "RTX 4070"
 }));
 
-// The misspelled field is accepted, but a lookup by the correct name finds nothing.
+// Помилка в назві поля: запис успішний, пошук нічого не знайде.
 printjson(db.pcs.insertOne({
   _id: 904,
   pc_id: 99,

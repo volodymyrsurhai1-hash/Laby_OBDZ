@@ -1,7 +1,7 @@
-// Run in Mongosh against dbsa after load-documents.js.
-// These examples are intentionally one-time operations; reset the collection before replaying.
+// Запустити після load-documents.js.
 
-// 1. Add an unfinished reservation. Expected: acknowledged, insertedId 9001.
+// 1. Додаємо неоплачену бронь.
+// Очікуємо insertedId: 9001.
 printjson(db.reservations.insertOne({
   _id: 9001,
   starts_at: ISODate("2032-05-01T10:00:00Z"),
@@ -17,34 +17,31 @@ printjson(db.reservations.insertOne({
   payment: null
 }));
 
-// 2. Find reservations without payment. Expected: 5 documents after step 1.
+// 2. Знаходимо броні без оплати. Очікуємо 5.
 printjson(db.reservations.find(
   { payment: null },
   { _id: 1, status: 1 }
 ).toArray());
 
-// 3. Find bookings at the Central club and return nested client/payment fields.
-// Expected: 5 documents from the original sample.
+// 3. Шукаємо броні клубу Center. Очікуємо 5.
 printjson(db.reservations.find(
   { "pc.club.name": "Cyber Club Center" },
   { _id: 1, "client.full_name": 1, "payment.amount": 1 }
 ).toArray());
 
-// 4. Update the just-added reservation's end time. Expected: matchedCount 1, modifiedCount 1.
+// 4. Змінюємо час завершення. Очікуємо matchedCount: 1.
 printjson(db.reservations.updateOne(
   { _id: 9001 },
   { $set: { ends_at: ISODate("2032-05-01T13:00:00Z") } }
 ));
 
-// 5. Insert a disposable mistaken row, count, delete it, and count again.
-// Expected: count 12 before delete, 11 after; deletedCount 1.
+// 5. Видаляємо тестову бронь. До: 12, після: 11.
 printjson(db.reservations.insertOne({ _id: 9002, status: "mistake" }));
 print("before delete:", db.reservations.countDocuments());
 printjson(db.reservations.deleteOne({ _id: 9002 }));
 print("after delete:", db.reservations.countDocuments());
 
-// 6. Run this exact insert a second time to see the duplicate _id error (E11000).
-// Use an existing source document so the first run does not change it.
+// 6. Повторний _id дає помилку E11000.
 try {
   db.reservations.insertOne({
     _id: 1,
@@ -64,8 +61,7 @@ try {
   print(error.message);
 }
 
-// 7. Upsert a separate key twice. First result inserts once; second matches that row.
-// Expected counts: 11 before, 12 after first run, still 12 after second run.
+// 7. Перевіряємо upsert двічі. Кількість: 11 → 12 → 12.
 print("before upsert:", db.reservations.countDocuments());
 printjson(db.reservations.updateOne(
   { _id: 10001 },

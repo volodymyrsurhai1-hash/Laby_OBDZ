@@ -1,5 +1,5 @@
-// Group the copied reservation events by club.
-// Compare the result with the SQL query in lab-03/analytic-queries.sql.
+// Групуємо броні за клубом.
+// Звіряємо з SQL-запитом Lab 3.
 
 printjson(db.reservations.aggregate([
   {

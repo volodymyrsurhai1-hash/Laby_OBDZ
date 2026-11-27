@@ -16,7 +16,7 @@
 # Консоль Redis:               docker compose -f compose-nosql.yaml exec redis redis-cli
 #
 # Пароль MongoDB записано у файлі свідомо: це навчальне середовище на власному компʼютері.
-# Redis працює без пароля, бо звертаються до нього лише з консолі всередині того самого контейнера.
+# Redis доступний із Docker без пароля.
 
 name: dbsa-nosql
 

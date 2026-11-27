@@ -1,122 +1,219 @@
-# Rule base: cyber-club reservations
+# База правил: бронювання в кіберклубі
 
-The rules describe one reservation request at a time. `client_under_limit` means the client
-has fewer than two active (not cancelled) reservations in the evaluated workload. A request
-is accepted only when the club and PC are active, its interval is valid, no active reservation
-overlaps the requested interval on that PC, and the client is below the limit.
+Правила описують один запит на бронювання за раз. `client_under_limit` означає, що клієнт має менше двох активних (не скасованих) бронювань у перевірюваному наборі даних. Запит приймається лише тоді, коли клуб і ПК активні, інтервал коректний, активні бронювання цього ПК не перетинаються із запитом, а клієнт не досяг ліміту. Окреме правило П9 перевіряє оплату вибраного активного бронювання після його створення.
 
-## 1. Production rules
+## 1. Продукційні правила
 
-| Rule | IF | THEN |
+| Правило | ЯКЩО | ТО |
 |---|---|---|
-| P1 | The club is active **and** the selected PC is active. | The PC is operational. |
-| P2 | The selected PC is inactive. | The PC is unavailable. |
-| P3 | The selected club is inactive. | The club is unavailable. |
-| P4 | An active reservation exists for the selected PC whose time range overlaps the requested range. | The requested slot is busy. |
-| P5 | The PC is operational, the request interval is valid, and no active reservation overlaps it. | The slot is available. |
-| P6 | The client has at least two active reservations. | The client has reached the reservation limit. |
-| P7 | The slot is available, the request interval is valid, and the client has fewer than two active reservations. | The reservation may be accepted. |
-| P8 | The PC is unavailable, the club is unavailable, the slot is busy, or the client has reached the limit. | The reservation must be refused. |
+| П1 | Клуб активний **і** вибраний ПК активний. | ПК працездатний. |
+| П2 | Вибраний ПК неактивний. | ПК недоступний. |
+| П3 | Вибраний клуб неактивний. | Клуб недоступний. |
+| П4 | Є активне бронювання вибраного ПК, інтервал якого перетинається із запитаним. | Запитаний слот зайнятий. |
+| П5 | ПК працездатний, інтервал запиту коректний і активного перетину бронювань немає. | Слот доступний. |
+| П6 | Клієнт має щонайменше два активні бронювання. | Клієнт досяг ліміту бронювань. |
+| П7 | Слот доступний, інтервал коректний, а в клієнта менше двох активних бронювань. | Бронювання можна прийняти. |
+| П8 | ПК або клуб недоступний, слот зайнятий чи клієнт досяг ліміту. | У бронюванні треба відмовити. |
+| П9 | Вибране активне бронювання не має пов'язаного запису про оплату. | Оплату за бронювання не зафіксовано. |
 
-P1, P4, P5, and P6 can be evaluated from the request and Lab 1 data. P2 and P3 identify
-unavailable resources. P5 depends on P1 and P7 depends on P5; P8 depends on P2, P3, P4,
-or P6. Thus four rules use conclusions from other rules.
+Правила, що спираються на висновки інших правил: П5 (на П1), П7 (на П5), П8 (на П2, П3, П4 або П6).
 
-P7 and P8 have opposite conclusions. Their conditions do not overlap: acceptance requires
-an available slot and fewer than two active reservations; refusal follows from a busy slot,
-an unavailable resource, or at least two active reservations.
+Правила зі складеною умовою: П1, П5 і П7 використовують умову «і»; П8 спрацьовує, якщо істинна будь-яка з причин, з'єднаних «або».
 
-## 2. Source of each condition
+Пара правил із протилежними висновками: П7 «бронювання можна прийняти» і П8 «у бронюванні треба відмовити». За повних фактів умови не перетинаються: П7 вимагає доступний слот і менше двох активних бронювань, а П8 — зайнятий слот, недоступний ресурс або досягнутий ліміт.
 
-| Rule | Condition | Source |
+Правило П9 про оплату не змінює рішення П7/П8: у поточній моделі неоплачене бронювання можливе, автоматичної відмови через відсутність платежу немає.
+
+## 2. Джерело кожної умови
+
+| Правило | Умова | Джерело |
 |---|---|---|
-| P1 | Club is active | `clubs.is_active` |
-| P1 | PC is active | `pcs.is_active` |
-| P2 | PC is inactive | `pcs.is_active` |
-| P3 | Club is inactive | `clubs.is_active` |
-| P4 | Existing reservation is active | `reservations.status` |
-| P4 | Existing interval overlaps request | `reservations.starts_at`, `reservations.ends_at`; requested interval is entered by the booking clerk |
-| P5 | PC is operational | Conclusion of P1 |
-| P5 | Requested interval is valid | `reservations.starts_at`, `reservations.ends_at` for existing rows; the new interval is entered by the client and checked by the booking application |
-| P5 | No active overlap | Search in `reservations` by `pc_id`, `status`, `starts_at`, and `ends_at` |
-| P6 | Client has at least two active reservations | Count rows in `reservations` by `client_id` and `status` |
-| P7 | Slot is available | Conclusion of P5 |
-| P7 | Requested interval is valid | Booking request entered by the client and checked by the booking application |
-| P7 | Client has fewer than two active reservations | Count rows in `reservations` by `client_id` and `status` |
-| P8 | PC is unavailable | Conclusion of P2 |
-| P8 | Club is unavailable | Conclusion of P3 |
-| P8 | Slot is busy | Conclusion of P4 |
-| P8 | Client reached limit | Conclusion of P6 |
+| П1 | Клуб активний | `clubs.is_active` |
+| П1 | ПК активний | `pcs.is_active` |
+| П2 | ПК неактивний | `pcs.is_active` |
+| П3 | Клуб неактивний | `clubs.is_active` |
+| П4 | Наявне бронювання активне | `reservations.status` |
+| П4 | Інтервал наявного бронювання перетинається із запитом | `reservations.starts_at`, `reservations.ends_at`; запитаний інтервал вводить працівник бронювання |
+| П5 | ПК працездатний | Висновок П1 |
+| П5 | Інтервал запиту коректний | `reservations.starts_at`, `reservations.ends_at` для наявних рядків; новий інтервал вводить клієнт і перевіряє застосунок бронювання |
+| П5 | Немає активного перетину | Пошук у `reservations` за `pc_id`, `status`, `starts_at` і `ends_at` |
+| П6 | У клієнта щонайменше два активні бронювання | Підрахунок рядків у `reservations` за `client_id` і `status` |
+| П7 | Слот доступний | Висновок П5 |
+| П7 | Інтервал запиту коректний | Запит бронювання, введений клієнтом і перевірений застосунком |
+| П7 | У клієнта менше двох активних бронювань | Підрахунок рядків у `reservations` за `client_id` і `status` |
+| П8 | ПК недоступний | Висновок П2 |
+| П8 | Клуб недоступний | Висновок П3 |
+| П8 | Слот зайнятий | Висновок П4 |
+| П8 | Клієнт досяг ліміту | Висновок П6 |
+| П9 | Вибране активне бронювання не має запису про оплату | `reservations.status` і відсутність відповідного `reservation_id` у `payments` |
 
-The schema does not record a pending, not-yet-inserted request. The client supplies its
-requested start and end times; the booking application validates `ends_at > starts_at`.
-The overlap check must run against current rows at decision time. PostgreSQL's exclusion
-constraint remains the authoritative protection against concurrent conflicting inserts.
+Схема не зберігає запит, який ще не вставлений у базу. Клієнт передає бажаний час початку й завершення, а застосунок бронювання перевіряє умову `ends_at > starts_at`. Перетин перевіряється за актуальними рядками під час прийняття рішення. Остаточним захистом від конкурентних конфліктних вставок залишається exclusion constraint у PostgreSQL.
 
-Rules based only on initial facts: P1, P2, P3, P4, and P6 (5).
-Rules using derived conclusions: P5, P7, and P8 (3).
+Для П9 відсутність рядка в `payments` означає лише те, що оплату не зафіксовано в базі. Це не доводить, що клієнт відмовився платити або що настав строк оплати.
 
-## 3. Forward-chaining examples
+Правила, що спираються лише на початкові факти: П1, П2, П3, П4, П6 і П9 (6).
+Правила, що використовують похідні висновки: П5, П7 і П8 (3).
 
-### Run 1: a free PC can be reserved
+## 3. Приклади прямого виведення
 
-Initial working memory:
+### Прогін 1: вільний ПК можна забронювати
 
-| Fact | Value |
+Початкові факти:
+
+| Факт | Значення |
 |---|---|
-| f1 | The club is active. |
-| f2 | The selected PC is active. |
-| f3 | The requested interval is valid. |
-| f4 | No active reservation overlaps this PC and interval. |
-| f5 | The client has one active reservation. |
-| f6 | The client confirmed the request. |
+| ф1 | Клуб активний. |
+| ф2 | Вибраний ПК активний. |
+| ф3 | Запитаний інтервал коректний. |
+| ф4 | На цьому ПК немає активного бронювання, що перетинається із запитаним інтервалом. |
+| ф5 | У клієнта одне активне бронювання. |
+| ф6 | Клієнт підтвердив запит. |
 
-Initial conflict set: P1.
+Початковий конфліктний набір: П1.
 
-| Cycle | Rule | New fact |
-|---|---|---|
-| 1 | P1 | f7: the PC is operational. |
-| 2 | P5 | f8: the slot is available. |
-| 3 | P7 | f9: the reservation may be accepted. |
-| 4 | - | No new fact; fixed point. |
+| Цикл | Правило | Новий факт |
+|---:|---|---|
+| 1 | П1 | ф7: ПК працездатний. |
+| 2 | П5 | ф8: слот доступний. |
+| 3 | П7 | ф9: бронювання можна прийняти. |
+| 4 | — | Нових фактів немає; досягнуто нерухомої точки. |
 
-Facts: 6 initially, 9 at the fixed point. P2, P3, P4, P6, and P8 did not fire.
+Спочатку було 6 фактів, у нерухомій точці — 9. Правила П2, П3, П4, П6 і П8 не спрацювали.
 
-### Run 2: an overlapping booking must be refused
+### Прогін 2: бронювання з перетином треба відхилити
 
-Initial working memory:
+Початкові факти:
 
-| Fact | Value |
+| Факт | Значення |
 |---|---|
-| f1 | The club is active. |
-| f2 | The selected PC is active. |
-| f3 | The requested interval is valid. |
-| f4 | An active reservation overlaps this PC and interval. |
-| f5 | The client already has two active reservations. |
-| f6 | The client confirmed the request. |
+| ф1 | Клуб активний. |
+| ф2 | Вибраний ПК активний. |
+| ф3 | Запитаний інтервал коректний. |
+| ф4 | Є активне бронювання цього ПК, що перетинається із запитом. |
+| ф5 | У клієнта вже є два активні бронювання. |
+| ф6 | Клієнт підтвердив запит. |
 
-Initial conflict set: P1, P4, and P6. Apply them by rule number.
+Початковий конфліктний набір: П1, П4 і П6. Застосовуємо правила за номером.
 
-| Cycle | Rule | New fact |
-|---|---|---|
-| 1 | P1 | f7: the PC is operational. |
-| 1 | P4 | f8: the slot is busy. |
-| 1 | P6 | f9: the client has reached the limit. |
-| 2 | P8 | f10: the reservation must be refused. |
-| 3 | - | No new fact; fixed point. |
+| Цикл | Правило | Новий факт |
+|---:|---|---|
+| 1 | П1 | ф7: ПК працездатний. |
+| 1 | П4 | ф8: слот зайнятий. |
+| 1 | П6 | ф9: клієнт досяг ліміту. |
+| 2 | П8 | ф10: у бронюванні треба відмовити. |
+| 3 | — | Нових фактів немає; досягнуто нерухомої точки. |
 
-Facts: 6 initially, 10 at the fixed point. P2, P3, P5, and P7 did not fire.
+Спочатку було 6 фактів, у нерухомій точці — 10. Правила П2, П3, П5 і П7 не спрацювали.
 
-The rules stayed the same; only the request and database facts changed. A rule not firing is
-normal when its condition is absent; it is concerning only if a real situation should trigger a
-rule but the required fact or rule source is missing.
+Правила залишилися тими самими; змінилися лише запит і факти бази даних. Правило не спрацьовує, якщо в конкретній ситуації відсутня його умова. Це проблема лише тоді, коли реальна ситуація мала б активувати правило, але потрібного факту або джерела немає.
 
-## 4. Decision journal example
+### Прогін 3: активне бронювання без оплати
 
-| Item | Recorded value |
+У бронювання №2 статус `active`, але пов'язаного запису в `payments` немає.
+
+| Факт | Значення |
 |---|---|
-| Decision | Accept one reservation request for an active PC. |
-| Facts | f1-f6 from Run 1. |
-| Rule-base version | `rules.md`, version 1 (record the Git commit when submitted). |
-| Explanation | P1 establishes an operational PC; P5 establishes an available slot; P7 accepts the request because the client has one active reservation. |
-| Confirmation | The club booking administrator confirms the decision. |
+| ф1 | Бронювання №2 активне. |
+| ф2 | Для бронювання №2 немає запису про оплату. |
+
+Початковий конфліктний набір: П9.
+
+| Цикл | Правило | Новий факт |
+|---:|---|---|
+| 1 | П9 | ф3: оплату за бронювання №2 не зафіксовано. |
+| 2 | — | Нових фактів немає; досягнуто нерухомої точки. |
+
+П9 виявляє неоплачене бронювання, але саме по собі не вимагає його відхилити. Це відповідає схемі: платежу може ще не бути. Правило перевіряє вже створене бронювання; у прогонах 1 і 2 розглядається ще не збережений запит.
+
+## 4. Ланцюжки виведення
+
+### Прогін 1
+
+Висновок: бронювання можна прийняти.
+
+```mermaid
+flowchart LR
+    A["Клуб і ПК активні"] --> P1["П1"] --> B["ПК працездатний"]
+    B --> P5["П5"]
+    C["Інтервал коректний"] --> P5
+    D["Активного перетину немає"] --> P5
+    P5 --> E["Слот доступний"] --> P7["П7"]
+    F["У клієнта одне активне бронювання"] --> P7
+    C --> P7
+    P7 --> G["Бронювання можна прийняти"]
+```
+
+Для замовника: «ПК працює, слот вільний, клієнт не досяг ліміту — бронювання можна прийняти».
+
+### Прогін 2
+
+Висновок: у бронюванні треба відмовити.
+
+```mermaid
+flowchart LR
+    A["Є активний перетин"] --> P4["П4"] --> B["Слот зайнятий"]
+    C["У клієнта два активні бронювання"] --> P6["П6"] --> D["Ліміт досягнуто"]
+    B --> P8["П8"]
+    D --> P8
+    P8 --> E["У бронюванні треба відмовити"]
+```
+
+П1 також спрацювало, але не входить до ланцюжка відмови.
+
+### Прогін 3
+
+Висновок: оплату за бронювання №2 не зафіксовано.
+
+```mermaid
+flowchart LR
+    A["Бронювання №2 активне"] --> P9["П9"]
+    B["Немає запису в payments"] --> P9
+    P9 --> C["Оплату не зафіксовано"]
+```
+
+## 5. Зворотне виведення
+
+### Гіпотеза підтверджується
+
+Гіпотеза: «бронювання можна прийняти» (П7). Для її доведення потрібні доступний слот, коректний інтервал і менше двох активних бронювань. Слот стає доступним за П5, а працездатність ПК підтверджує П1.
+
+```mermaid
+flowchart LR
+    G["Можна прийняти?"] --> P7["П7"]
+    P7 --> S["Слот доступний"]
+    P7 --> T["Інтервал коректний"]
+    P7 --> L["Менше двох активних бронювань"]
+    S --> P5["П5"]
+    P5 --> O["ПК працездатний"]
+    P5 --> T
+    P5 --> N["Немає активного перетину"]
+    O --> P1["П1"]
+    P1 --> C["Клуб активний"]
+    P1 --> A["ПК активний"]
+```
+
+Не потрібні П2, П3, П4, П6, П8 і П9: вони не доводять гіпотезу прийняття.
+
+### Гіпотеза не підтверджується
+
+Для прогону 1 гіпотеза «слот зайнятий» не підтверджується: у фактах явно зазначено, що активного перетину немає.
+
+```mermaid
+flowchart LR
+    G["Слот зайнятий?"] --> P4["П4"]
+    P4 --> S["Є активне бронювання цього ПК,<br/>що перетинає інтервал?"]
+    S --> N["Факт: активного перетину немає"]
+    N --> R["Гіпотезу не підтверджено"]
+```
+
+Якщо у фактах взагалі немає відповіді про перетин, це означає «невідомо», а не «перетину точно немає». За припущенням замкнутого світу відсутність факту все одно може трактуватися як «ні», що небезпечно для бронювання.
+
+## 6. Приклад журналу рішення
+
+| Пункт | Запис |
+|---|---|
+| Рішення | Прийняти один запит на бронювання активного ПК. |
+| Факти | ф1–ф6 із прогону 1. |
+| Версія бази правил | `rules.md`, версія 2. |
+| Пояснення | П1 підтверджує працездатність ПК; П5 — доступність слота; П7 дозволяє прийняти запит, бо в клієнта одне активне бронювання. |
+| Підтвердження | Рішення підтверджує адміністратор бронювання клубу. |

@@ -1,5 +1,5 @@
-// Copy the same ten reservations (IDs 1-10) from lab-02/seed-data.sql.
-// Run in MongoDB Compass Mongosh after: use dbsa
+// Копіюємо бронювання №1–10 із seed Lab 2.
+// Виконати в Mongosh після use dbsa.
 
 db.reservations.insertMany([
   {
@@ -144,5 +144,5 @@ db.reservations.insertMany([
   }
 ]);
 
-// Expected on the first run: 10.
+// Очікувано: 10 документів.
 print("reservation documents:", db.reservations.countDocuments());

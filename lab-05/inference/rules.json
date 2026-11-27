@@ -1,0 +1,77 @@
+{
+  "goals": [
+    "booking_can_be_accepted",
+    "booking_must_be_rejected",
+    "payment_not_recorded"
+  ],
+  "labels": {
+    "club_active": "клуб активний",
+    "pc_active": "вибраний ПК активний",
+    "requested_interval_valid": "запитаний інтервал коректний",
+    "no_active_overlap": "немає активного перетину бронювань",
+    "client_under_limit": "у клієнта менше двох активних бронювань",
+    "request_confirmed": "клієнт підтвердив запит",
+    "pc_inactive": "вибраний ПК неактивний",
+    "club_inactive": "вибраний клуб неактивний",
+    "active_overlap_exists": "є активне бронювання, що перетинається із запитом",
+    "client_has_at_least_two_active_reservations": "у клієнта щонайменше два активні бронювання",
+    "selected_booking_active": "вибране бронювання активне",
+    "selected_payment_missing": "для бронювання немає пов'язаного запису про оплату",
+    "pc_operational": "ПК працездатний",
+    "pc_unavailable": "ПК недоступний",
+    "club_unavailable": "клуб недоступний",
+    "requested_slot_busy": "запитаний слот зайнятий",
+    "requested_slot_available": "запитаний слот доступний",
+    "client_limit_reached": "клієнт досяг ліміту бронювань",
+    "booking_can_be_accepted": "бронювання можна прийняти",
+    "booking_must_be_rejected": "у бронюванні треба відмовити",
+    "payment_not_recorded": "оплату за бронювання не зафіксовано"
+  },
+  "rules": [
+    {
+      "id": "П1",
+      "all": ["club_active", "pc_active"],
+      "then": "pc_operational"
+    },
+    {
+      "id": "П2",
+      "all": ["pc_inactive"],
+      "then": "pc_unavailable"
+    },
+    {
+      "id": "П3",
+      "all": ["club_inactive"],
+      "then": "club_unavailable"
+    },
+    {
+      "id": "П4",
+      "all": ["active_overlap_exists"],
+      "then": "requested_slot_busy"
+    },
+    {
+      "id": "П5",
+      "all": ["pc_operational", "requested_interval_valid", "no_active_overlap"],
+      "then": "requested_slot_available"
+    },
+    {
+      "id": "П6",
+      "all": ["client_has_at_least_two_active_reservations"],
+      "then": "client_limit_reached"
+    },
+    {
+      "id": "П7",
+      "all": ["requested_slot_available", "requested_interval_valid", "client_under_limit"],
+      "then": "booking_can_be_accepted"
+    },
+    {
+      "id": "П8",
+      "any": ["pc_unavailable", "club_unavailable", "requested_slot_busy", "client_limit_reached"],
+      "then": "booking_must_be_rejected"
+    },
+    {
+      "id": "П9",
+      "all": ["selected_booking_active", "selected_payment_missing"],
+      "then": "payment_not_recorded"
+    }
+  ]
+}

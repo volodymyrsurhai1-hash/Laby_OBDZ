@@ -2,6 +2,10 @@
 /lect/
 /lectures/
 
+# Python cache files.
+__pycache__/
+*.py[cod]
+
 # Operating-system files.
 .DS_Store
 Thumbs.db

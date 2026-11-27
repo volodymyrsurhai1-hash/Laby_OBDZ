@@ -1,0 +1,8 @@
+[
+  "club_active",
+  "pc_active",
+  "requested_interval_valid",
+  "no_active_overlap",
+  "client_under_limit",
+  "request_confirmed"
+]
